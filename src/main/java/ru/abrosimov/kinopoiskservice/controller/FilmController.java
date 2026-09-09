@@ -2,11 +2,11 @@ package ru.abrosimov.kinopoiskservice.controller;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 import ru.abrosimov.kinopoiskservice.entity.Film;
+import ru.abrosimov.kinopoiskservice.repository.FilmRepository;
+import ru.abrosimov.kinopoiskservice.service.CsvReportService;
+import ru.abrosimov.kinopoiskservice.service.EmailService;
 import ru.abrosimov.kinopoiskservice.service.FilmService;
 
 import org.springframework.data.domain.Page;
@@ -56,4 +56,33 @@ public class FilmController {
         );
         return ResponseEntity.ok(result);
     }
+
+    private final CsvReportService csvReportService;
+    private final EmailService emailService;
+    private final FilmRepository filmRepository; // чтобы взять все фильмы
+
+    // 1. Скачать CSV-файл прямо из браузера
+    @GetMapping("/report/download")
+    public ResponseEntity<byte[]> downloadCsvReport() {
+        List<Film> allFilms = filmRepository.findAll();
+        byte[] csvData = csvReportService.generateCsvReport(allFilms);
+
+        return ResponseEntity.ok()
+                .header(org.springframework.http.HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=films_report.csv")
+                .header(org.springframework.http.HttpHeaders.CONTENT_TYPE, "text/csv; charset=UTF-8")
+                .body(csvData);
+    }
+
+    // 2. Отправить CSV-отчет на почту
+    @PostMapping("/report/email")
+    public ResponseEntity<String> sendReportToEmail(@RequestParam(name = "to") String toEmail) {
+        List<Film> allFilms = filmRepository.findAll();
+        byte[] csvData = csvReportService.generateCsvReport(allFilms);
+
+        emailService.sendReportWithAttachment(toEmail, csvData, "films_report.csv");
+        return ResponseEntity.ok("Отчет успешно отправлен на " + toEmail);
+    }
+
+
+
 }
