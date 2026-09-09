@@ -9,6 +9,8 @@ import org.springframework.web.bind.annotation.RestController;
 import ru.abrosimov.kinopoiskservice.entity.Film;
 import ru.abrosimov.kinopoiskservice.service.FilmService;
 
+import org.springframework.data.domain.Page;
+
 import java.util.List;
 
 @RestController
@@ -35,5 +37,23 @@ public class FilmController {
                 keyword, countries, genres, order, type, ratingFrom, ratingTo, yearFrom, yearTo, page
         );
         return ResponseEntity.ok(importedFilms);
+    }
+
+    @GetMapping("/db")
+    public ResponseEntity<Page<Film>> searchInDb(
+            @RequestParam(name = "keyword", required = false) String keyword,
+            @RequestParam(name = "yearFrom", required = false) Integer yearFrom,
+            @RequestParam(name = "yearTo", required = false) Integer yearTo,
+            @RequestParam(name = "ratingFrom", required = false) Double ratingFrom,
+            @RequestParam(name = "ratingTo", required = false) Double ratingTo,
+            @RequestParam(name = "page", required = false, defaultValue = "1") int page,
+            @RequestParam(name = "size", required = false, defaultValue = "10") int size,
+            @RequestParam(name = "sortBy", required = false, defaultValue = "id") String sortBy,
+            @RequestParam(name = "direction", required = false, defaultValue = "ASC") String direction
+    ) {
+        Page<Film> result = filmService.searchFilmsInDatabase(
+                keyword, yearFrom, yearTo, ratingFrom, ratingTo, page, size, sortBy, direction
+        );
+        return ResponseEntity.ok(result);
     }
 }

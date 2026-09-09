@@ -9,6 +9,13 @@ import ru.abrosimov.kinopoiskservice.dto.KinopoiskResponseDto;
 import ru.abrosimov.kinopoiskservice.entity.Film;
 import ru.abrosimov.kinopoiskservice.repository.FilmRepository;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
+import ru.abrosimov.kinopoiskservice.repository.FilmSpecification;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -81,5 +88,33 @@ public class FilmService {
                 .rating(dto.getRating())
                 .description(dto.getDescription())
                 .build();
+    }
+
+    // Метод поиска по нашей собственной базе с пагинацией и сортировкой
+    @Transactional(readOnly = true)
+    public Page<Film> searchFilmsInDatabase(
+            String keyword,
+            Integer yearFrom,
+            Integer yearTo,
+            Double ratingFrom,
+            Double ratingTo,
+            int page,
+            int size,
+            String sortBy,
+            String direction
+    ) {
+        // Формируем направление сортировки (ASC - по возрастанию, DESC - по убыванию)
+        Sort.Direction sortDirection = "DESC".equalsIgnoreCase(direction) ? Sort.Direction.DESC : Sort.Direction.ASC;
+        Sort sort = Sort.by(sortDirection, sortBy);
+
+        // В Spring пагинация считается с 0, а клиенты обычно шлют страницу с 1
+        int pageNumber = Math.max(page - 1, 0);
+        Pageable pageable = PageRequest.of(pageNumber, size, sort);
+
+        // Собираем динамические фильтры
+        Specification<Film> spec = FilmSpecification.filterBy(keyword, yearFrom, yearTo, ratingFrom, ratingTo);
+
+        // Выполняем постраничный запрос в Postgres
+        return filmRepository.findAll(spec, pageable);
     }
 }
